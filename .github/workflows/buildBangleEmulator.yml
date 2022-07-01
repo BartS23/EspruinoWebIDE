@@ -1,0 +1,89 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build Bangle Emulator
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout EspruinoWebIDE
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          path: 'EspruinoWebIDE'
+
+      - name: Checkout Espruino
+        uses: actions/checkout@v3
+        with:
+          repository: espruino/Espruino
+          submodules: recursive
+          path: 'Espruino'
+          
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          # Make sure to set a version number!
+          version: 3.1.12
+          # This is the name of the cache folder.
+          # The cache folder will be placed in the build directory,
+          #  so make sure it doesn't conflict with anything!
+          actions-cache-folder: 'emsdk'
+
+      - name: run Create Emulator
+        run: ./EspruinoWebIDE/extras/create_emulator.sh
+      
+      - name: Set Git config
+        run: |
+          cd EspruinoWebIDE
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
+
+      - name: Commit if necessary
+        run: |
+          set +e  # Don't terminate on first non-zero exit code
+          
+          cd EspruinoWebIDE
+          COMMITMESSAGE="$RUNNER_TEMP/commitmessage.txt"
+          
+          echo "Check emulator_banglejs1"
+          git diff-index --quiet HEAD emu/emulator_banglejs1.js
+          if [ $? -eq 1 ]
+          then
+            echo "emulator_banglejs1 changed"
+            git add emu/emulator_banglejs1.js
+            echo "Update Emulator BangleJS 1" >> $COMMITMESSAGE
+          fi
+
+          echo "Check emulator_banglejs2"
+          git diff-index --quiet HEAD emu/emulator_banglejs2.js
+          if [ $? -eq 1 ]
+          then
+            echo "emulator_banglejs2 changed"
+            git add emu/emulator_banglejs2.js
+            echo "Update Emulator BangleJS 2" >> $COMMITMESSAGE
+          fi
+
+          echo "Check changes"
+          if [ -s $COMMITMESSAGE ]
+          then
+            echo "Found changes"
+            git commit --file $COMMITMESSAGE
+            echo "commited=true" >> $GITHUB_ENV
+          fi
+          
+      - name: Push if necessary
+        if: env.commited == 'true'
+        run: |
+          cd EspruinoWebIDE
+          echo "Push"
+          git push
