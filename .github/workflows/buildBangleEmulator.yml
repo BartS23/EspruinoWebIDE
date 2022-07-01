@@ -54,7 +54,11 @@ jobs:
           
           cd EspruinoWebIDE
           COMMITMESSAGE="$RUNNER_TEMP/commitmessage.txt"
-          
+          COMMIT=false
+
+          echo "Update Bangle Emulator" > $COMMITMESSAGE
+          echo "" >> $COMMITMESSAGE
+
           echo "Check emulator_banglejs1"
           git diff-index --quiet HEAD emu/emulator_banglejs1.js
           if [ $? -eq 1 ]
@@ -62,6 +66,7 @@ jobs:
             echo "emulator_banglejs1 changed"
             git add emu/emulator_banglejs1.js
             echo "Update Emulator BangleJS 1" >> $COMMITMESSAGE
+            COMMIT=true
           fi
 
           echo "Check emulator_banglejs2"
@@ -71,10 +76,11 @@ jobs:
             echo "emulator_banglejs2 changed"
             git add emu/emulator_banglejs2.js
             echo "Update Emulator BangleJS 2" >> $COMMITMESSAGE
+            COMMIT=true
           fi
 
           echo "Check changes"
-          if [ -s $COMMITMESSAGE ]
+          if [ "$COMMIT" = true ]
           then
             echo "Found changes"
             git commit --file $COMMITMESSAGE
