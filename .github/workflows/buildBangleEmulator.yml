@@ -46,7 +46,7 @@ jobs:
 
       - name: run Create Emulator
         run: |
-          if [ "${{ github.event.inputs.release" = "true" ]
+          if [ "${{ github.event.inputs.release }}" = "true" ]
           then 
             release = 1
           else
