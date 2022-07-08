@@ -67,7 +67,7 @@ jobs:
         run: |
           set +e  # Don't terminate on first non-zero exit code
           
-          cd $RUNNER_WORKSPACE/EspruinoWebIDE
+          cd $GITHUB_WORKSPACE/EspruinoWebIDE
           COMMITMESSAGE="$RUNNER_TEMP/commitmessage.txt"
           COMMIT=false
 
