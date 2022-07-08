@@ -9,7 +9,7 @@ on:
     inputs:
       release:
         type: boolean
-        description: If 1 create release Build
+        description: Create release Build?
         default: false
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -47,8 +47,8 @@ jobs:
       - name: run Create Emulator
         run: |
           cd $RUNNER_WORKSPACE/Espruino
-          make clean;RELEASE=${{ github.event.inputs.release }} BOARD=EMSCRIPTEN make || exit 1
-          make clean;RELEASE=${{ github.event.inputs.release }} BOARD=EMSCRIPTEN2 make || exit 1
+          make clean;RELEASE=${{ github.event.inputs.release == 'true' }} BOARD=EMSCRIPTEN make || exit 1
+          make clean;RELEASE=${{ github.event.inputs.release == 'true' }} BOARD=EMSCRIPTEN2 make || exit 1
           cp $RUNNER_WORKSPACE/Espruino/emulator_banglejs*.js $RUNNER_WORKSPACE/EspruinoWebIDE/emu/ -v
       
       - name: Set Git config
