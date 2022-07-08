@@ -98,6 +98,7 @@ jobs:
           if [ "$COMMIT" = true ]
           then
             echo "Found changes"
+            git status
             git commit --file $COMMITMESSAGE
             echo "commited=true" >> $GITHUB_ENV
           fi
