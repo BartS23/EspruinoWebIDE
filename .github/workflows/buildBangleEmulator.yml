@@ -38,9 +38,16 @@ jobs:
           # The cache folder will be placed in the build directory,
           #  so make sure it doesn't conflict with anything!
           actions-cache-folder: 'emsdk'
-
+          
+      - run: env
+      
       - name: run Create Emulator
-        run: ./EspruinoWebIDE/extras/create_emulator.sh
+        run: |
+          cd Espruino
+          source ../emsdk/emsdk_env.sh
+          make clean;RELEASE=0 BOARD=EMSCRIPTEN make || exit 1
+          make clean;RELEASE=0 BOARD=EMSCRIPTEN2 make || exit 1
+          cp emulator_banglejs*.js ../EspruinoWebIDE/emu/
       
       - name: Set Git config
         run: |
