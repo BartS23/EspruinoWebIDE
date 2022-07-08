@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       release:
+        type: boolean
         description: If 1 create release Build
-        required: true
         default: false
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
