@@ -48,9 +48,9 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.release }}" = "true" ]
           then 
-            release = 1
+            release=1
           else
-            release = 0
+            release=0
           fi
           cd $GITHUB_WORKSPACE/Espruino
           make clean;RELEASE=$release BOARD=EMSCRIPTEN make || exit 1
