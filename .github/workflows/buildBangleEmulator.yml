@@ -46,9 +46,15 @@ jobs:
 
       - name: run Create Emulator
         run: |
+          if [ "${{ github.event.inputs.release" = "true" ]
+          then 
+            release = 1
+          else
+            release = 0
+          fi
           cd $GITHUB_WORKSPACE/Espruino
-          make clean;RELEASE=${{ github.event.inputs.release == 'true' }} BOARD=EMSCRIPTEN make || exit 1
-          make clean;RELEASE=${{ github.event.inputs.release == 'true' }} BOARD=EMSCRIPTEN2 make || exit 1
+          make clean;RELEASE=$release BOARD=EMSCRIPTEN make || exit 1
+          make clean;RELEASE=$release BOARD=EMSCRIPTEN2 make || exit 1
           cp $GITHUB_WORKSPACE/Espruino/emulator_banglejs*.js $GITHUB_WORKSPACE/EspruinoWebIDE/emu/ -v
       
       - name: Set Git config
