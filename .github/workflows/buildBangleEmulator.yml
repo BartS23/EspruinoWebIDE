@@ -48,10 +48,10 @@ jobs:
       
       - name: run Create Emulator
         run: |
-          cd Espruino
+          cd $RUNNER_WORKSPACE/Espruino
           make clean;RELEASE=${{ github.event.inputs.release }} BOARD=EMSCRIPTEN make || exit 1
           make clean;RELEASE=${{ github.event.inputs.release }} BOARD=EMSCRIPTEN2 make || exit 1
-          cp emulator_banglejs*.js ../EspruinoWebIDE/emu/
+          cp $RUNNER_WORKSPACE/Espruino/emulator_banglejs*.js $RUNNER_WORKSPACE/EspruinoWebIDE/emu/ -v
       
       - name: Set Git config
         run: |
@@ -63,7 +63,7 @@ jobs:
         run: |
           set +e  # Don't terminate on first non-zero exit code
           
-          cd EspruinoWebIDE
+          cd $RUNNER_WORKSPACE/EspruinoWebIDE
           COMMITMESSAGE="$RUNNER_TEMP/commitmessage.txt"
           COMMIT=false
 
@@ -101,6 +101,6 @@ jobs:
       - name: Push if necessary
         if: env.commited == 'true'
         run: |
-          cd EspruinoWebIDE
+          cd $RUNNER_WORKSPACE/EspruinoWebIDE
           echo "Push"
           git push
