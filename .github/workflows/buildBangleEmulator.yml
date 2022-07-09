@@ -48,7 +48,7 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.release }}" = "true" ]
           then 
-            release="RELEASE=1!
+            release="RELEASE=1"
           else
             release=""
           fi
