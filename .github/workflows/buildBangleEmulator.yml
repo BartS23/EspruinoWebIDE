@@ -48,13 +48,15 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.release }}" = "true" ]
           then 
-            release=1
+            release="RELEASE=1!
           else
-            release=0
+            release=""
           fi
           cd $GITHUB_WORKSPACE/Espruino
-          make clean;RELEASE=$release BOARD=EMSCRIPTEN make || exit 1
-          make clean;RELEASE=$release BOARD=EMSCRIPTEN2 make || exit 1
+          make clean
+          $release BOARD=EMSCRIPTEN make || exit 1
+          make clean
+          $release BOARD=EMSCRIPTEN2 make || exit 1       
           cp $GITHUB_WORKSPACE/Espruino/emulator_banglejs*.js $GITHUB_WORKSPACE/EspruinoWebIDE/emu/ -v
       
       - name: Set Git config
