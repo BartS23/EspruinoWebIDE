@@ -75,21 +75,21 @@ jobs:
           echo "" >> $COMMITMESSAGE
 
           echo "Check emulator_banglejs1"
+          git add emu/emulator_banglejs1.js
           git diff-index --quiet HEAD emu/emulator_banglejs1.js
           if [ $? -eq 1 ]
           then
             echo "emulator_banglejs1 changed"
-            git add emu/emulator_banglejs1.js
             echo "Update Emulator BangleJS 1" >> $COMMITMESSAGE
             COMMIT=true
           fi
 
           echo "Check emulator_banglejs2"
+          git add emu/emulator_banglejs2.js
           git diff-index --quiet HEAD emu/emulator_banglejs2.js
           if [ $? -eq 1 ]
           then
             echo "emulator_banglejs2 changed"
-            git add emu/emulator_banglejs2.js
             echo "Update Emulator BangleJS 2" >> $COMMITMESSAGE
             COMMIT=true
           fi
