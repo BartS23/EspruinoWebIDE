@@ -13,6 +13,7 @@
 (function(){
 
   var Blockly;
+  var whenInitialised = {}; // If this is called before Blockly was initialised...
 
   window.blocklyLoaded = function(blockly, blocklyWindow) { // see blockly/blockly.html
     Blockly = blockly;
@@ -32,17 +33,30 @@
             }}]
         });
         $('#promptinput').focus();
-
       };
     }
+    setTimeout(function() {
+      if (whenInitialised.show) {
+        $("#divblockly").hide(); // not sure why this is required, but it is!
+        $("#divblockly").show();
+        Blockly.setVisible();
+      }
+      if (whenInitialised.setXML)
+        setXML(whenInitialised.setXML);
+      whenInitialised = {};
+    }, 10);
+  };
+
+  window.blocklyChanged = function(contents) { // see blockly/blockly.html
+    Espruino.callProcessor("xmlCodeChanged", { code : contents } );
   };
 
   function init() {
     // Config
     Espruino.Core.Config.add("BLOCKLY_TO_JS", {
       section : "General",
-      name : "Overwrite JavaScript with Graphical Editor",
-      description : "When you click 'Send to Espruino', should the code from the Graphical Editor overwrite the JavaScript code in the editor window?",
+      name : "Create JavaScript from Graphical Editor",
+      description : "When you click 'Send to Espruino', should the code from the Graphical Editor create a tab containing JavaScript?",
       type : "boolean",
       defaultValue : false,
     });
@@ -75,9 +89,12 @@
     });
 
     // Handle the 'sending' processor so we can update the JS if we need to...
-    Espruino.addProcessor("sending", function(data, callback) {
-      if(Espruino.Config.BLOCKLY_TO_JS && Espruino.Core.Code.isInBlockly())
-        Espruino.Core.EditorJavaScript.setCode( "// Code from Graphical Editor\n"+Espruino.Core.EditorBlockly.getCode() );
+    Espruino.addProcessor("sending", function(data, callback) {      
+      if(Espruino.Config.BLOCKLY_TO_JS && Espruino.Core.File.isInBlockly()) {
+        var activeFile = Espruino.Core.File.getActiveFile();
+        Espruino.Core.File.setJSCode( "// Code from Graphical Editor\n"+Espruino.Core.EditorBlockly.getCode() , {fileName:"blockly.js"});
+        Espruino.Core.File.showFile(activeFile); // ensure even if we created tab, we go back to blockly
+      }
       callback(data);
     });
     // when we get JSON for the board, pass it to blockly
@@ -107,10 +124,10 @@
       /* We have to hide Blockly while it refreshes for some reason or
       it comes up completely broken */
       var inBlockly = Espruino.Core.Code.isInBlockly();
-      if (inBlockly) Espruino.Core.Code.switchToCode();
+      if (inBlockly) setVisible(false);
       $("#divblockly")[0].contentWindow.location = blocklyUrl;
       if (inBlockly) setTimeout(function() {
-        Espruino.Core.Code.switchToBlockly();
+        setVisible(true);
       }, 500);
     } else {
       // Otherwise we just have the iframe
@@ -127,13 +144,24 @@
   }
 
   function setXML(xml) {
-    Blockly.mainWorkspace.clear();
-    Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(xml), Blockly.mainWorkspace);
+    if (Blockly) {
+      Blockly.mainWorkspace.clear();
+      Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(xml), Blockly.mainWorkspace);
+    } else 
+      whenInitialised.setXML = xml;
   }
 
   // Hack around issues Blockly have if we initialise when the window isn't visible
-  function setVisible() {
-    Blockly.setVisible();
+  function setVisible(isVisible) {
+    if (isVisible) {
+      $("#divblockly").show();
+      if (Blockly)
+        Blockly.setVisible();
+      else
+        whenInitialised.show = true; // when Blockly is set, we make sure we make it visible!
+    } else {
+      $("#divblockly").hide();
+    }
   }
 
   // Add blocks for something specific to BLOCKLY_EXTENSIONS
@@ -152,6 +180,9 @@
     getXML : getXML,
     setXML : setXML,
     setVisible : setVisible,
-    addBlocksFor : addBlocksFor
+    addBlocksFor : addBlocksFor,
+    DEFAULT_CODE : `<xml id="blocklyInitial" style="display: none">
+    <block type="espruino_watch" inline="true"  ><title name="EDGE">rising</title><value name="PIN"><block type="espruino_pin"><title name="PIN">BTN1</title></block></value><statement name="DO"><block type="espruino_digitalWrite" inline="true"><value name="PIN"><block type="espruino_pin"><title name="PIN">LED1</title></block></value><value name="VAL"><block type="logic_boolean"><title name="BOOL">TRUE</title></block></value><next><block type="espruino_timeout" inline="true"><value name="SECONDS"><block type="math_number"><title name="NUM">1</title></block></value><statement name="DO"><block type="espruino_digitalWrite" inline="true"><value name="PIN"><block type="espruino_pin"><title name="PIN">LED1</title></block></value><value name="VAL"><block type="logic_boolean"><title name="BOOL">FALSE</title></block></value></block></statement></block></next></block></statement></block>
+  </xml>`
   };
 }());

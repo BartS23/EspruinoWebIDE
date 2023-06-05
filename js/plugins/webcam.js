@@ -95,25 +95,36 @@
     return $('#terminal').hasClass("terminal--webcam");
   }
 
-  function enableWebCam(constraints) {
-    var window_url = window.URL || window.webkitURL;
+  function displayMediaStream(mediaStream) {    
+    webCamStream = mediaStream;    
+    if (mediaStream===undefined) { // if nothing, remove the element
+      $('video').attr('src', "");
+      $("#terminal").removeClass("terminal--webcam");
+      return;
+    }
+    // otherwise create video element
     var vid = document.getElementById("videotag");
+    try {
+      vid.srcObject = mediaStream;
+    } catch (error) {
+      vid.src = URL.createObjectURL(mediaStream);
+    }
+    setTimeout(function cb() {
+      if (vid.videoWidth)
+        console.log("Webcam video dimensions: "+vid.videoWidth+"x"+vid.videoHeight);
+      else
+        setTimeout(cb, 1000);
+    }, 1000);
+    $("#terminal").addClass("terminal--webcam");
+  }
+
+  function enableWebCam(constraints) {
+    var window_url = window.URL || window.webkitURL;    
     console.log("Requesting WebCam ", constraints);
     navigator.getUserMedia(constraints, function(mediaSource) {
-      webCamStream = mediaSource;
-      try {
-          vid.srcObject = mediaSource;
-        } catch (error) {
-          vid.src = URL.createObjectURL(mediaSource);
-        }
       console.log("Webcam started");
-      setTimeout(function cb() {
-        if (vid.videoWidth)
-          console.log("Webcam video dimensions: "+vid.videoWidth+"x"+vid.videoHeight);
-        else
-          setTimeout(cb, 1000);
-      }, 1000);
-      $("#terminal").addClass("terminal--webcam");
+      displayMediaStream(mediaSource);
+      Espruino.callProcessor("webcam", { visible : true, stream : mediaSource });
     }, function(e) {
       console.log('onError!', e);
       Espruino.Core.Notifications.error("Problem initialising WebCam");
@@ -193,13 +204,14 @@
         webCamStream.stop();
       if (webCamStream.getTracks) // new hotness
         webCamStream.getTracks().forEach(track => track.stop())
-      $('video').attr('src', "");
-      $("#terminal").removeClass("terminal--webcam");
+      displayMediaStream(undefined);
+      Espruino.callProcessor("webcam", { visible : false });
     }
     Espruino.Core.Terminal.focus();
   };
 
   Espruino.Plugins.Webcam = {
     init : init,
+    displayMediaStream : displayMediaStream,
   };
 }());

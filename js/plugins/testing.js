@@ -444,7 +444,7 @@
   function loadProject() {
     if(testProject !== ""){
       Espruino.Plugins.Project.loadFile("projects/" + testProject + ".js",function(data){
-        Espruino.Core.EditorJavaScript.setCode(data);
+        Espruino.Core.File.setJSCode(data, {fileName:testProject + ".js"});
       });
     }
   }
@@ -907,11 +907,10 @@
   }
 
   function openTestingWindow(){
-    if (isInTesting()) {
+    if (isInTesting())
       switchToCode();
-      Espruino.Core.EditorJavaScript.madeVisible();
-    }
-    else { switchToTesting();}
+    else 
+      switchToTesting();
   }
 
   function switchToTesting() {
