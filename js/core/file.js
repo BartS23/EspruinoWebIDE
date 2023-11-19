@@ -53,7 +53,7 @@
   /* Files contains objects of this type:
       type :"js"/"xml"
       fileName : "Untitled.js"
-      storageFile : "", // file on Espruino device (Espruino.Config.SAVE_STORAGE_FILE)
+      storageName : "", // file on Espruino device (Espruino.Config.SAVE_STORAGE_FILE)
       sendMode : 0,    // file on Espruino device (Espruino.Config.SAVE_ON_SEND)
       contents : "",   // the actual file contents
       handle           // file handle if loaded using file API
@@ -81,11 +81,15 @@
     var file = {
       type : options.type, // "js"/"xml"
       fileName : "Untitled."+options.type, // file path in filesystem
-      storageFile : "", // file on Espruino device (Espruino.Config.SAVE_STORAGE_FILE)
-      sendMode : 0,    // file on Espruino device (Espruino.Config.SAVE_ON_SEND)
+      storageName : "", // file on Espruino device (Espruino.Config.SAVE_STORAGE_FILE)
+      sendMode : Espruino.Core.Send.SEND_MODE_RAM,    // file on Espruino device (Espruino.Config.SAVE_ON_SEND)
       contents : "",    // the actual file contents
     };
     if (options.fileName) file.fileName = options.fileName;
+    if (options.storageName) {
+      file.storageName = options.storageName;
+      file.sendMode = Espruino.Core.Send.SEND_MODE_STORAGE;
+    }
     if (options.contents)
       file.contents = options.contents;
     else if (!options.isEmpty) {
@@ -101,12 +105,21 @@
   }
 
   // Sets the file and the editor up with the file's contents
-  function setFileEditorContents(file, value) {
+  function setFileEditorContents(file, value, options) {
+    options = options||{};
     file.contents = value;
-    if (file.editor)
+    if (file.editor) {
       file.editor.setCode(value);
-    else if (file.type=="xml")
+
+      // If `options.clearHistory`, then mark editor as clean with no
+      // existing undo history. Using this for newly-created editors
+      // will ensure that the first entry in the Undo history sets the
+      // contents to `value` and not empty.
+      if (options.clearHistory) file.editor.codeMirror.clearHistory();
+
+    } else if (file.type=="xml") {
       Espruino.Core.EditorBlockly.setXML(value);
+    }
   }
 
   function setActiveFile(idx) {
@@ -126,7 +139,7 @@
       if (files[idx].editor==undefined) {
         // if we didn't have an editor, make one
         files[idx].editor = Espruino.Core.EditorJavaScript.createNewEditor();
-        setFileEditorContents(files[idx], files[idx].contents);
+        setFileEditorContents(files[idx], files[idx].contents, {clearHistory: true});
       } else {
         files[idx].editor.setVisible(true);
       }
@@ -361,9 +374,16 @@
     // Handle file send mode or JS changed
     Espruino.addProcessor("sendModeChanged", function(_, callback) {
       if (activeFile>=0 && activeFile<files.length) {
-        files[activeFile].storageName = Espruino.Config.SAVE_STORAGE_FILE;
-        files[activeFile].sendMode = Espruino.Config.SAVE_ON_SEND;
-        saveFileConfig();
+        var f = files[activeFile];
+        f.storageName = Espruino.Config.SAVE_STORAGE_FILE;
+        f.sendMode = Espruino.Config.SAVE_ON_SEND;
+        if (f.storageName!="" && f.type=="js" && f.fileName=="Untitled.js") {
+          f.fileName = f.storageName;
+          if (!f.fileName.endsWith(".js"))
+            f.fileName += ".js";
+          updateFileTabs();
+        }
+        saveFileConfig();        
       }
       callback(_);
     });
@@ -402,7 +422,7 @@
     // if we're in
     if (openFileMode == "watch" || openFileMode == "upload") {
       watchInterval = setInterval(function() {
-        files.forEach(readFileContents);
+        files.forEach((file) => {readFileContents(file)});
       }, WATCH_INTERVAL);
     }
   }
@@ -446,7 +466,7 @@
           if (!fileHandle.name) return;
           var file = createNewTab({fileName:fileHandle.name, isEmpty:true});
           file.handle = fileHandle;
-          readFileContents(file);
+          readFileContents(file, {clearHistory: true});
         });
       });
     } else if (("undefined"!=typeof chrome) && chrome.fileSystem) {
@@ -457,7 +477,7 @@
           var reader = new FileReader();
           reader.onload = function(e) {
             var file = createNewTab({fileName:fileEntry.name, isEmpty:true});
-            setFileEditorContents(file, convertFromOS(e.target.result));
+            setFileEditorContents(file, convertFromOS(e.target.result), {clearHistory: true});
           };
           reader.onerror = function() {
             Espruino.Core.Notifications.error("Error Loading", true);
@@ -473,14 +493,17 @@
       var mimeTypeList = Object.values(mimeTypes) + "," + Object.keys(mimeTypes);
       Espruino.Core.Utils.fileOpenDialog({id:"code",type:"text",mimeType:mimeTypeList}, function(data, mimeType, fileName) {
         var file = createNewTab({fileName:fileName, isEmpty:true});
-        setFileEditorContents(file, convertFromOS(data));
+        setFileEditorContents(file, convertFromOS(data), {clearHistory: true});
       });
     }
   }
 
 
   // read a file from window.showOpenFilePicker
-  function readFileContents(fileToLoad) {
+  function readFileContents(fileToLoad, options) {
+    options = options||{};
+    if (options.clearHistory === undefined) options.clearHistory = false;
+
     if (!fileToLoad.handle) {
       return;
     }
@@ -498,7 +521,7 @@
       if (!contents) return;
       // if loaded, update editor
       fileToLoad.lastModified = file.lastModified;
-      setFileEditorContents(fileToLoad, convertFromOS(contents));
+      setFileEditorContents(fileToLoad, convertFromOS(contents), {clearHistory: options.clearHistory});
       if (openFileMode == "upload") {
         Espruino.Core.Notifications.info(new Date().toLocaleTimeString() + ": " + fileToLoad.name+" changed, uploading...");
         Espruino.Plugins.KeyShortcuts.action("icon-deploy");
@@ -522,10 +545,7 @@
          }).
          then(w => {
           writable = w;
-          var data = fileToSave.contents;
-          var rawdata = new Uint8Array(data.length);
-          for (var i=0;i<data.length;i++) rawdata[i]=data.charCodeAt(i);
-          var fileBlob = new Blob([rawdata.buffer], {type: "text/plain"});
+          var fileBlob = new Blob([fileToSave.contents], {type: "text/plain"});
           return writable.write(fileBlob);
          }).
          then(() => writable.close()).
@@ -548,12 +568,19 @@
     if (!options.fileName)
       options.fileName = "code.js";
     var file = files.find(file => file.fileName==options.fileName);
+    let newEditorOpened = false;
     if (!file) {
-      file = createNewTab({type:"js",fileName:options.fileName,isEmpty:true,contents:code});
+      file = createNewTab({
+        type:"js",
+        fileName:options.fileName,
+        storageName:options.isStorageFile ? options.fileName : undefined,
+        isEmpty:true,
+        contents:code});
+      newEditorOpened = true;
     } else {
       if (files[activeFile] != file)
         setActiveFile(files.indexOf(file));
-      setFileEditorContents(file, code);
+      setFileEditorContents(file, code, {clearHistory: newEditorOpened});
     }
   }
 
