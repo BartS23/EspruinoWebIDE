@@ -61,7 +61,7 @@
       popup.setContents('<h2 class="list__no-results">Connecting...</h2>');
       function connect() {
         connectToPort(port, function(success){
-          popup.close();
+          if (popup) popup.close();
           if(success){
             if (callback!==undefined) callback();
           }
@@ -151,12 +151,11 @@
     }
 
     Espruino.Core.Status.setStatus("Connecting...");
-    Espruino.Core.Serial.setSlowWrite(true); // force slow write to ensure things work ok
     Espruino.Core.Serial.open(serialPort, function(cInfo) {
       if (cInfo!==undefined && cInfo.error===undefined) {
         console.log("Device found "+JSON.stringify(cInfo));
-        var name = nameFromConInfo(cInfo);        
-        if (Espruino.Core.Env) {          
+        var name = nameFromConInfo(cInfo);
+        if (Espruino.Core.Env) {
           var boardData = Espruino.Core.Env.getBoardData();
           if (!boardData.BOARD || !boardData.VERSION)
             name += " (No response from board)";
